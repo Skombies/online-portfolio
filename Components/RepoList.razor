@@ -1,0 +1,160 @@
+@{
+    var visible = VisibleRepos();
+}
+
+<div class="repo-tools">
+    <div class="field field-search">
+        <label for="repo-search">Search</label>
+        <input id="repo-search"
+               type="search"
+               placeholder="Name, description or topic"
+               autocomplete="off"
+               @bind="search"
+               @bind:event="oninput" />
+    </div>
+    <div class="field">
+        <label for="repo-language">Language</label>
+        <select id="repo-language" value="@(SelectedLanguage ?? string.Empty)" @onchange="OnLanguageChange">
+            <option value="">All languages</option>
+            @foreach (var language in AllLanguages)
+            {
+                <option value="@language">@language</option>
+            }
+        </select>
+    </div>
+    <div class="field">
+        <label for="repo-sort">Sort by</label>
+        <select id="repo-sort" @bind="sort">
+            <option value="@SortUpdated">Recently updated</option>
+            <option value="@SortStars">Most stars</option>
+            <option value="@SortName">Name</option>
+        </select>
+    </div>
+</div>
+
+<p class="repo-count" aria-live="polite">
+    <span>@CountText(visible.Count)</span>
+    @if (IsFiltered)
+    {
+        <button type="button" class="text-button" @onclick="ClearFiltersAsync">Clear filters</button>
+    }
+</p>
+
+@if (visible.Count == 0)
+{
+    <p class="empty">No repositories match. Try a shorter search or choose All languages.</p>
+}
+else
+{
+    <ul class="repo-list">
+        @foreach (var repo in visible)
+        {
+            <li class="repo-row" @key="repo.Name">
+                <div class="repo-main">
+                    <a class="repo-name" href="@repo.HtmlUrl">@repo.Name</a>
+                    @if (repo.Fork)
+                    {
+                        <span class="badge">Fork</span>
+                    }
+                    @if (repo.Archived)
+                    {
+                        <span class="badge">Archived</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(repo.Description))
+                    {
+                        <p class="repo-desc">@repo.Description</p>
+                    }
+                </div>
+                <div class="repo-facts">
+                    <span class="repo-lang">
+                        @if (!string.IsNullOrWhiteSpace(repo.Language))
+                        {
+                            <span class="swatch" style="--swatch: @LanguageColors.For(repo.Language)"></span>
+                            @repo.Language
+                        }
+                    </span>
+                    <span class="repo-stars">
+                        <StarIcon />
+                        @Formatting.Count(repo.StargazersCount)<span class="sr-only"> stars</span>
+                    </span>
+                    <span class="repo-updated">@Formatting.Updated(repo.PushedAt)</span>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private const string SortUpdated = "updated";
+    private const string SortStars = "stars";
+    private const string SortName = "name";
+
+    [Parameter, EditorRequired] public IReadOnlyList<GitHubRepo> Repos { get; set; } = Array.Empty<GitHubRepo>();
+    [Parameter] public string? SelectedLanguage { get; set; }
+    [Parameter] public EventCallback<string?> SelectedLanguageChanged { get; set; }
+
+    private string search = string.Empty;
+    private string sort = SortUpdated;
+
+    private bool IsFiltered => !string.IsNullOrWhiteSpace(search) || SelectedLanguage is not null;
+
+    private IEnumerable<string> AllLanguages => Repos
+        .Where(r => !string.IsNullOrWhiteSpace(r.Language))
+        .GroupBy(r => r.Language!, StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(g => g.Count())
+        .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+        .Select(g => g.Key);
+
+    private List<GitHubRepo> VisibleRepos()
+    {
+        IEnumerable<GitHubRepo> query = Repos;
+
+        if (SelectedLanguage is not null)
+        {
+            query = query.Where(r => string.Equals(r.Language, SelectedLanguage, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var term = search.Trim();
+        if (term.Length > 0)
+        {
+            query = query.Where(r => Matches(r, term));
+        }
+
+        query = sort switch
+        {
+            SortStars => query.OrderByDescending(r => r.StargazersCount).ThenByDescending(r => r.PushedAt ?? DateTimeOffset.MinValue),
+            SortName => query.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase),
+            _ => query.OrderByDescending(r => r.PushedAt ?? DateTimeOffset.MinValue),
+        };
+
+        return query.ToList();
+    }
+
+    private static bool Matches(GitHubRepo repo, string term) =>
+        repo.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+        || (repo.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (repo.Topics?.Any(t => t.Contains(term, StringComparison.OrdinalIgnoreCase)) ?? false);
+
+    private string CountText(int visibleCount)
+    {
+        if (!IsFiltered)
+        {
+            return Formatting.Plural(Repos.Count, "repository", "repositories");
+        }
+
+        var scope = SelectedLanguage is null ? "" : $" in {SelectedLanguage}";
+        return $"Showing {Formatting.Count(visibleCount)} of {Formatting.Plural(Repos.Count, "repository", "repositories")}{scope}";
+    }
+
+    private Task OnLanguageChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        return SelectedLanguageChanged.InvokeAsync(string.IsNullOrEmpty(value) ? null : value);
+    }
+
+    private Task ClearFiltersAsync()
+    {
+        search = string.Empty;
+        return SelectedLanguageChanged.InvokeAsync(null);
+    }
+}

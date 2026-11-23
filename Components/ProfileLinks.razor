@@ -1,0 +1,16 @@
+@if (Links.Count > 0)
+{
+    <ul class="profile-links @Class">
+        @foreach (var link in Links)
+        {
+            <li>
+                <a href="@link.Url" target="@(Formatting.IsLocalFile(link.Url) ? "_blank" : null)">@link.Label</a>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ProfileLink> Links { get; set; } = Array.Empty<ProfileLink>();
+    [Parameter] public string? Class { get; set; }
+}

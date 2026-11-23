@@ -1,0 +1,62 @@
+<section class="masthead wrap" aria-labelledby="person-name">
+    <div class="masthead-top">
+        <h1 id="person-name" class="person-name">@Config.DisplayName(User)</h1>
+        @if (!string.IsNullOrEmpty(User?.AvatarUrl))
+        {
+            <img class="avatar" src="@User.AvatarUrl" alt="" width="112" height="112" />
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Config.Title))
+    {
+        <p class="person-title">@Config.Title</p>
+    }
+
+    @if (Config.TaglineFor(User) is { } tagline)
+    {
+        <p class="tagline">@tagline</p>
+    }
+
+    @if (StatsSentence is { } stats)
+    {
+        <p class="stats">@stats</p>
+    }
+
+    <ProfileLinks Links="Config.AllLinks(User)" />
+</section>
+
+@code {
+    [Parameter, EditorRequired] public PortfolioConfig Config { get; set; } = default!;
+    [Parameter] public GitHubUser? User { get; set; }
+    [Parameter] public IReadOnlyList<GitHubRepo> Repos { get; set; } = Array.Empty<GitHubRepo>();
+
+    // Numbers as a sentence: "24 public repositories, 310 stars earned and 52 followers on GitHub."
+    private string? StatsSentence
+    {
+        get
+        {
+            if (User is null)
+            {
+                return null;
+            }
+
+            var parts = new List<string>
+            {
+                Formatting.Plural(User.PublicRepos, "public repository", "public repositories"),
+            };
+
+            var stars = Repos.Where(r => !r.Fork).Sum(r => r.StargazersCount);
+            if (stars > 0)
+            {
+                parts.Add(Formatting.Plural(stars, "star", "stars") + " earned");
+            }
+
+            if (User.Followers > 0)
+            {
+                parts.Add(Formatting.Plural(User.Followers, "follower", "followers"));
+            }
+
+            return Formatting.JoinWithAnd(parts) + " on GitHub.";
+        }
+    }
+}

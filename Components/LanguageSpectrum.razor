@@ -1,0 +1,86 @@
+@* The language bar: one segment per language, sized by how many repositories use it.
+   Choosing a language (in the bar or the list under it) filters "All repositories". *@
+
+<section class="spectrum" aria-labelledby="spectrum-heading">
+    <h2 id="spectrum-heading" class="spectrum-heading">@Heading</h2>
+
+    @if (IsLoading)
+    {
+        <div class="spectrum-band is-placeholder" aria-hidden="true"></div>
+        <p class="spectrum-note" role="status">Reading repositories from GitHub</p>
+    }
+    else if (Languages.Count == 0)
+    {
+        <div class="spectrum-band is-placeholder" aria-hidden="true"></div>
+        <p class="spectrum-note">Languages appear here once your public repositories contain code.</p>
+    }
+    else
+    {
+        <div class="spectrum-band is-ready @(SelectedLanguage is null ? null : "has-selection")" aria-hidden="true">
+            @foreach (var language in Languages)
+            {
+                <div @key="language.Name"
+                     class="segment @(IsSelected(language) ? "is-selected" : null) @(language.IsOther ? "is-other" : null)"
+                     style="flex-grow: @language.Count; --swatch: @language.Color"
+                     title="@SegmentTitle(language)"
+                     @onclick="() => ToggleAsync(language)"></div>
+            }
+        </div>
+
+        <ul class="spectrum-legend">
+            @foreach (var language in Languages)
+            {
+                <li @key="language.Name">
+                    @if (language.IsOther)
+                    {
+                        <span class="legend-item">
+                            <span class="swatch" style="--swatch: @language.Color"></span>
+                            @language.Name
+                            <span class="legend-count">@language.Count<span class="sr-only"> repositories</span></span>
+                        </span>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="legend-item"
+                                aria-pressed="@(IsSelected(language) ? "true" : "false")"
+                                @onclick="() => ToggleAsync(language)">
+                            <span class="swatch" style="--swatch: @language.Color"></span>
+                            @language.Name
+                            <span class="legend-count">@language.Count<span class="sr-only"> repositories</span></span>
+                        </button>
+                    }
+                </li>
+            }
+        </ul>
+        <p class="spectrum-note">Choose a language to filter the repository list.</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<LanguageStat> Languages { get; set; } = Array.Empty<LanguageStat>();
+    [Parameter] public int RepoCount { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? SelectedLanguage { get; set; }
+    [Parameter] public EventCallback<string?> SelectedLanguageChanged { get; set; }
+
+    private string Heading => IsLoading || RepoCount == 0
+        ? "Languages"
+        : $"Languages across {Formatting.Plural(RepoCount, "repository", "repositories")}";
+
+    private static string SegmentTitle(LanguageStat language) =>
+        $"{language.Name}: {Formatting.Plural(language.Count, "repository", "repositories")}";
+
+    private bool IsSelected(LanguageStat language) =>
+        string.Equals(language.Name, SelectedLanguage, StringComparison.OrdinalIgnoreCase);
+
+    private Task ToggleAsync(LanguageStat language)
+    {
+        if (language.IsOther)
+        {
+            return Task.CompletedTask;
+        }
+
+        return SelectedLanguageChanged.InvokeAsync(IsSelected(language) ? null : language.Name);
+    }
+}

@@ -1,0 +1,30 @@
+<section id="experience" class="section wrap" aria-labelledby="experience-heading">
+    <h2 id="experience-heading" class="section-heading">Experience</h2>
+
+    <ol class="timeline">
+        @foreach (var item in Items)
+        {
+            <li class="timeline-item">
+                @if (!string.IsNullOrWhiteSpace(item.Period))
+                {
+                    <p class="timeline-period">@item.Period</p>
+                }
+                <h3 class="timeline-role">
+                    @item.Role
+                    @if (!string.IsNullOrWhiteSpace(item.Organization))
+                    {
+                        <span class="timeline-org">at @item.Organization</span>
+                    }
+                </h3>
+                @if (!string.IsNullOrWhiteSpace(item.Summary))
+                {
+                    <p class="timeline-summary">@item.Summary</p>
+                }
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ExperienceItem> Items { get; set; } = Array.Empty<ExperienceItem>();
+}

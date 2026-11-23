@@ -1,0 +1,213 @@
+@page "/"
+@inject PortfolioService Portfolio
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (config is null)
+{
+    <main class="wrap page-state">
+        @if (configError is not null)
+        {
+            <div class="notice" role="alert">
+                <h1 class="notice-title">The portfolio settings didn't load</h1>
+                <p>@configError</p>
+            </div>
+        }
+        else
+        {
+            <p class="muted" role="status">Loading portfolio</p>
+        }
+    </main>
+}
+else
+{
+    <HeadContent>
+        @if (Tagline is not null)
+        {
+            <meta name="description" content="@Tagline" />
+        }
+    </HeadContent>
+
+    <header class="topbar wrap">
+        <a class="handle" href="@config.ProfileUrl">@("@" + config.GithubUsername)</a>
+        <nav class="topnav" aria-label="Page sections">
+            @if (featured.Count > 0)
+            {
+                <a href="#work">Work</a>
+            }
+            <a href="#repositories">Repositories</a>
+            @if (HasAbout)
+            {
+                <a href="#about">About</a>
+            }
+            @if (config.Experience.Count > 0)
+            {
+                <a href="#experience">Experience</a>
+            }
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <main>
+        <Masthead Config="config" User="github?.User" Repos="Repos" />
+
+        <div class="wrap">
+            <LanguageSpectrum Languages="languages"
+                              RepoCount="Repos.Count"
+                              IsLoading="IsLoading"
+                              SelectedLanguage="@selectedLanguage"
+                              SelectedLanguageChanged="SelectFromSpectrum" />
+
+            @if (github?.Error is not null)
+            {
+                <div class="notice" role="alert">
+                    <p>@github.Error</p>
+                </div>
+            }
+        </div>
+
+        @if (featured.Count > 0)
+        {
+            <section id="work" class="section wrap" aria-labelledby="work-heading">
+                <h2 id="work-heading" class="section-heading">Selected work</h2>
+                <div class="features">
+                    @foreach (var repo in featured)
+                    {
+                        <FeaturedProject @key="repo.Name" Repo="repo" />
+                    }
+                </div>
+            </section>
+        }
+
+        <section id="repositories" class="section wrap" aria-labelledby="repos-heading">
+            <h2 id="repos-heading" class="section-heading" tabindex="-1" @ref="repoHeading">All repositories</h2>
+            @if (IsLoading)
+            {
+                <p class="muted" role="status">Loading repositories from GitHub</p>
+            }
+            else if (Repos.Count == 0 && github?.Error is null)
+            {
+                <p class="muted">No public repositories yet. They'll appear here as soon as you publish one on GitHub.</p>
+            }
+            else if (Repos.Count > 0)
+            {
+                <RepoList Repos="Repos"
+                          SelectedLanguage="@selectedLanguage"
+                          SelectedLanguageChanged="SelectFromList" />
+            }
+        </section>
+
+        @if (HasAbout)
+        {
+            <AboutSection Config="config" />
+        }
+
+        @if (config.Experience.Count > 0)
+        {
+            <ExperienceTimeline Items="config.Experience" />
+        }
+
+        <ContactSection Config="config" User="github?.User" />
+    </main>
+
+    <footer class="site-footer">
+        <div class="wrap">
+            <p>Built with C# and Blazor WebAssembly. Repository details come live from the GitHub API.</p>
+        </div>
+    </footer>
+}
+
+@code {
+    private PortfolioConfig? config;
+    private string? configError;
+    private GitHubSnapshot? github;
+    private IReadOnlyList<LanguageStat> languages = Array.Empty<LanguageStat>();
+    private IReadOnlyList<GitHubRepo> featured = Array.Empty<GitHubRepo>();
+    private string? selectedLanguage;
+    private ElementReference repoHeading;
+
+    private bool IsLoading => config is not null && github is null;
+
+    private IReadOnlyList<GitHubRepo> Repos => github?.Repos ?? Array.Empty<GitHubRepo>();
+
+    private string? Tagline => config?.TaglineFor(github?.User);
+
+    private bool HasAbout => config is not null && (config.About.Count > 0 || config.Skills.Count > 0);
+
+    private string PageTitleText
+    {
+        get
+        {
+            if (config is null)
+            {
+                return "Portfolio";
+            }
+
+            var name = config.DisplayName(github?.User);
+            return string.IsNullOrWhiteSpace(config.Title) ? name : $"{name}, {config.Title}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            config = await Portfolio.LoadConfigAsync();
+        }
+        catch (PortfolioConfigException ex)
+        {
+            configError = ex.Message;
+            return;
+        }
+
+        // Show your name and details straight away while GitHub data is on its way.
+        StateHasChanged();
+
+        github = await Portfolio.LoadGitHubAsync(config);
+        languages = LanguageStats.From(github.Repos);
+        featured = PickFeatured(config, github.Repos);
+    }
+
+    private static IReadOnlyList<GitHubRepo> PickFeatured(PortfolioConfig config, IReadOnlyList<GitHubRepo> repos)
+    {
+        if (config.FeaturedRepos.Count > 0)
+        {
+            var byName = repos
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            return config.FeaturedRepos
+                .Select(name => byName.GetValueOrDefault(name.Trim()))
+                .OfType<GitHubRepo>()
+                .ToList();
+        }
+
+        return repos
+            .Where(r => !r.Fork && !r.Archived)
+            .OrderByDescending(r => r.StargazersCount)
+            .ThenByDescending(r => r.PushedAt ?? DateTimeOffset.MinValue)
+            .Take(4)
+            .ToList();
+    }
+
+    // Choosing a language in the bar filters the list and moves focus (and the view) to it.
+    private async Task SelectFromSpectrum(string? language)
+    {
+        selectedLanguage = language;
+        if (language is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await repoHeading.FocusAsync();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The heading isn't on the page yet; the filter still applies.
+        }
+    }
+
+    private void SelectFromList(string? language) => selectedLanguage = language;
+}

@@ -1,0 +1,40 @@
+<section id="about" class="section wrap" aria-labelledby="about-heading">
+    <h2 id="about-heading" class="section-heading">About</h2>
+
+    <div class="about-grid @(HasText && HasSkills ? null : "is-single")">
+        @if (HasText)
+        {
+            <div class="about-text">
+                @foreach (var paragraph in Config.About.Where(p => !string.IsNullOrWhiteSpace(p)))
+                {
+                    <p>@paragraph</p>
+                }
+            </div>
+        }
+
+        @if (HasSkills)
+        {
+            <div class="skills">
+                @foreach (var group in Config.Skills.Where(g => g.Items.Count > 0))
+                {
+                    <div class="skill-group">
+                        <h3>@group.Name</h3>
+                        <ul class="skill-list">
+                            @foreach (var item in group.Items)
+                            {
+                                <li>@item</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public PortfolioConfig Config { get; set; } = default!;
+
+    private bool HasText => Config.About.Any(p => !string.IsNullOrWhiteSpace(p));
+    private bool HasSkills => Config.Skills.Any(g => g.Items.Count > 0);
+}

@@ -1,0 +1,46 @@
+<article class="feature" style="--lang-color: @Color">
+    <h3 class="feature-name">
+        <a href="@Repo.HtmlUrl">@Repo.Name</a>
+    </h3>
+
+    @if (!string.IsNullOrWhiteSpace(Repo.Description))
+    {
+        <p class="feature-desc">@Repo.Description</p>
+    }
+
+    @if (Repo.Topics is { Count: > 0 } topics)
+    {
+        <ul class="topics" aria-label="Topics">
+            @foreach (var topic in topics.Take(6))
+            {
+                <li class="topic">@topic</li>
+            }
+        </ul>
+    }
+
+    <p class="meta">
+        @if (!string.IsNullOrWhiteSpace(Repo.Language))
+        {
+            <span class="meta-lang"><span class="swatch" style="--swatch: @Color"></span>@Repo.Language</span>
+        }
+        <span>@Formatting.Plural(Repo.StargazersCount, "star", "stars")</span>
+        @if (Repo.ForksCount > 0)
+        {
+            <span>@Formatting.Plural(Repo.ForksCount, "fork", "forks")</span>
+        }
+        <span>@Formatting.Updated(Repo.PushedAt)</span>
+    </p>
+
+    @if (Formatting.NormalizeUrl(Repo.Homepage) is { } liveUrl)
+    {
+        <p class="feature-links"><a href="@liveUrl">Open the live site</a></p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public GitHubRepo Repo { get; set; } = default!;
+
+    private string Color => string.IsNullOrWhiteSpace(Repo.Language)
+        ? "var(--rule)"
+        : LanguageColors.For(Repo.Language);
+}

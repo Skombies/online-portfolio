@@ -1,0 +1,23 @@
+<section id="contact" class="section wrap contact" aria-labelledby="contact-heading">
+    <h2 id="contact-heading" class="section-heading">Contact</h2>
+
+    @if (Email is not null)
+    {
+        <p class="contact-lead">Email is the quickest way to reach me.</p>
+        <a class="contact-email" href="@MailTo">@Email</a>
+    }
+    else
+    {
+        <p class="contact-lead">You can find me here:</p>
+    }
+
+    <ProfileLinks Links="Config.AllLinks(User, includeEmail: false)" Class="contact-links" />
+</section>
+
+@code {
+    [Parameter, EditorRequired] public PortfolioConfig Config { get; set; } = default!;
+    [Parameter] public GitHubUser? User { get; set; }
+
+    private string? Email => string.IsNullOrWhiteSpace(Config.Email) ? null : Config.Email.Trim();
+    private string MailTo => "mailto:" + Email;
+}

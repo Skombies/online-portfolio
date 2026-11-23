@@ -1,0 +1,63 @@
+{
+  "githubUsername": "Skombies",
+  "name": "Shakier Coetzee",
+  "title": "Junior software engineer",
+  "tagline": "I'm a software engineering graduate in Cape Town with a strong interest in software development and DevOps, and I'm looking for my next role.",
+  "email": "shakiercoetzee251@gmail.com",
+  "links": [
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/mogamatshakier-coetzee-ab431126a"
+    }
+  ],
+  "about": [
+    "I have a BSc in Information Technology from Eduvos, specialising in software engineering. The work I enjoy most is building solutions, working through technical problems and trying out new technologies, especially in software development and DevOps.",
+    "Most recently I worked as a junior software engineer at Cyberium Technologies in Cape Town. I'm motivated, adaptable and enjoy working with other people, and I'm always looking to strengthen my technical skills as the industry changes.",
+    "I'm now looking for a role where I can contribute to real projects, learn from experienced engineers and keep growing in the field."
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "items": [
+        "C#",
+        "C++",
+        "PHP",
+        "HTML",
+        "Python",
+        "Java"
+      ]
+    },
+    {
+      "name": "Tools and platforms",
+      "items": [
+        "GitHub",
+        "PostgreSQL",
+        "Linux"
+      ]
+    }
+  ],
+  "featuredRepos": [],
+  "hiddenRepos": [],
+  "showForks": false,
+  "showArchived": true,
+  "experience": [
+    {
+      "role": "Junior software engineer",
+      "organization": "Cyberium Technologies",
+      "period": "June 2026 to November 2026",
+      "summary": null
+    },
+    {
+      "role": "Sales employee",
+      "organization": "Gadget Time",
+      "period": "September 2024 to August 2025",
+      "summary": null
+    },
+    {
+      "role": "BSc Information Technology",
+      "organization": "Eduvos",
+      "period": "February 2023 to December 2025",
+      "summary": "Specialised in software engineering."
+    }
+  ]
+}
